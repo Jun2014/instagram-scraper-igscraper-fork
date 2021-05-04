@@ -13,7 +13,10 @@ from .scrape_stories import ScrapeStories
 from .count_stories import CountStories
 from .check_if_profile_has_posts import CheckIfProfileHasPosts
 from .check_if_account_is_private import CheckIfAccountIsPrivate
+from .check_if_has_link import CheckIfHasLink
 from .grab_post_links import GrabPostLinks
+from .grab_reel_links import GrabReelLinks
+from .grab_igtv_links import GrabIgtvLinks
 from .go_to_link import GoToLink
 from .get_user_id import GetUserId
 from .get_vid_src_url import GetVidSrcUrl

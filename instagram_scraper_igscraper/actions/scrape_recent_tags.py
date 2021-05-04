@@ -39,7 +39,7 @@ class ScrapeRecentTags(actions.Action):
 
         progress_bar = ProgressBar(len(self.__tag.post_links), show_count=True)
         for post_link in self.__tag.post_links:
-            actions.InitScrape(self._scraper, post_link, self.__tag.output_recent_tag_path).do()
+            actions.InitScrape(self._scraper, post_link, None, self.__tag.output_recent_tag_path).do()
             self.__database.insert_tag_post(post_link, self.__tag.tagname, in_recent=True)
             progress_bar.update(1)
         progress_bar.close()

@@ -29,7 +29,7 @@ setup(
     keywords=['instagram', 'scraper', 'download', 'photos', 'pictures', 'videos', 'selenium'],
     packages=find_packages(),
     entry_points={
-        'console_scripts': [name + '=instagram_scraper.app:main'],
+        'console_scripts': [name + '=instagram_scraper_igscraper.app:main'],
     },
     install_requires=requires,
     license='MIT',

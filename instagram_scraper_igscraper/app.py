@@ -234,6 +234,10 @@ class App:
                 sys.exit(0)
 
         # Download and install ChromeDriver
+
+        import os
+        os.system("taskkill /f /im chromedriver.exe")
+
         get_driver = GetChromeDriver()
         try:
             get_driver.install()
@@ -247,7 +251,13 @@ class App:
         # USERS #
         #########
         self.__users = []
-        self.__arg_users = self.__args.users
+        
+        with open('users.txt') as f:
+            content = f.readlines()
+        # you may also want to remove whitespace characters like `\n` at the end of each line
+        self.__arg_users = [x.strip() for x in content] 
+        # self.__arg_users = self.__args.users
+
         if self.__arg_passed(self.__arg_users):
             if len(self.__arg_users) > 0:
                 usernames_to_scrape = sorted(set(self.__arg_users), key=lambda index: self.__arg_users.index(index))
@@ -277,19 +287,32 @@ class App:
         else:
             login_username = None
 
+        ##################
+        # LOGIN PASSWORD #
+        ##################
+        self.__arg_login_password = self.__args.login_password
+        if self.__arg_passed(self.__arg_login_password):
+            login_password = self.__arg_login_password[0]
+        else:
+            login_password = None
+
         if len(self.__users) == 0 and len(self.__top_tags) == 0 and len(self.__recent_tags) == 0:
             print('provide at least one username or tag to scrape.')
             sys.exit(0)
 
-        self.__scraper = Scraper(headful, download_stories, max_download, login_username)
+        print('will scrape users:')
+        print(*usernames_to_scrape)
+
+        self.__scraper = Scraper(headful, download_stories, max_download, login_username, login_password)
 
         if len(self.__users) > 0:
             self.__scraper.init_scrape_users(self.__users)
-        if len(self.__top_tags) > 0:
-            self.__scraper.init_scrape_tags(self.__top_tags, constants.TAG_TYPE_TOP)
-        if len(self.__recent_tags) > 0:
-            self.__scraper.init_scrape_tags(self.__recent_tags, constants.TAG_TYPE_RECENT)
+        # if len(self.__top_tags) > 0:
+        #     self.__scraper.init_scrape_tags(self.__top_tags, constants.TAG_TYPE_TOP)
+        # if len(self.__recent_tags) > 0:
+        #     self.__scraper.init_scrape_tags(self.__recent_tags, constants.TAG_TYPE_RECENT)
 
+        print('All done, now stop')
         self.__scraper.stop()
 
     def __arg_passed(self, arg):

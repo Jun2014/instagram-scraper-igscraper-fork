@@ -1,3 +1,4 @@
+from instagram_scraper_igscraper import helper
 import sqlite3
 import logging
 import uuid
@@ -24,7 +25,7 @@ class Database:
 
             cursor.execute("CREATE TABLE IF NOT EXISTS post " +
                            "(id TEXT PRIMARY KEY UNIQUE, link TEXT, has_multiple_content INTEGER, " +
-                           "user_id INTEGER, " +
+                           "user_id INTEGER, user_name TEXT, post_type TEXT, shortcode TEXT, downloaded INTEGER, new_posts_file_timestamp Text, " +
                            "FOREIGN KEY(user_id) REFERENCES user(id) ON DELETE SET NULL );")
 
             cursor.execute("CREATE TABLE IF NOT EXISTS tag_post " +
@@ -83,17 +84,58 @@ class Database:
         values = {'id': userid, 'username': username}
         self.__execute_query_and_commit(query, values)
 
-    def insert_post(self, link, has_multiple_content, userid=None):
+    def insert_post(self, link, has_multiple_content, downloaded, userid=None):
         post_id = self.__get_post_id(link)
 
         if all(v is not None for v in [post_id, userid]):
             query = "UPDATE post SET user_id =" + userid + " WHERE id ='" + post_id + "';"
             self.__execute_query_and_commit(query)
         elif not post_id:
-            query = "INSERT INTO post VALUES (:id, :link, :has_multiple_content, :user_id);"
+            query = "INSERT INTO post VALUES (:id, :link, :has_multiple_content, :user_id, :downloaded);"
             values = {'id': str(uuid.uuid4()), 'link': link, 'has_multiple_content': has_multiple_content,
-                      'user_id': userid}
+                      'user_id': userid, 'downloaded': downloaded}
             self.__execute_query_and_commit(query, values)
+
+    def video_post_link_exists_by_shortcode(self, shortcode):
+        query = "SELECT EXISTS( SELECT 1 FROM post WHERE shortcode='" + shortcode + "' LIMIT 1);"
+        data = self.__execute_query_and_fetch(query)
+        result = data[0][0]
+
+        if result == 1:
+            return True
+        return False
+
+    def insert_video_post_to_download(self, username, post_type, link, new_post_log_file_timestamp):
+        shortcode = helper.extract_shortcode_from_url(link)
+        post_id = self.__get_post_id(link)
+
+        if not post_id:
+            query = "INSERT INTO post VALUES (:id, :link, :has_multiple_content, :user_id, :user_name, :post_type, :shortcode, :downloaded, :new_posts_file_timestamp);"
+            values = {'id': str(uuid.uuid4()), 'link': link, 'has_multiple_content': False,
+                      'user_id': None, 'user_name': username, 'post_type': post_type, 'shortcode': shortcode, 'downloaded': False,
+                      'new_posts_file_timestamp': new_post_log_file_timestamp}
+            self.__execute_query_and_commit(query, values)
+
+    # def insert_video_posts_to_download(self, links):
+    #     posts = []
+    #     for link in links:
+    #         posts.append((str(uuid.uuid4()), link, False, None, False))
+
+    #     cursor = self.__connection.cursor()
+
+    #     try:
+    #         print('to insert')
+    #         mySql_insert_query = """INSERT INTO post (id, link, has_multiple_content, user_id, downloaded) 
+    #                        VALUES (%s, %s, %s, %s, %s) """
+    #         cursor.executemany(mySql_insert_query,posts)
+    #         print('Inserted ', cursor.rowcount, ' posts to the table.')
+    #     except sqlite3.Error as err:
+    #         logger.error('error at executing query: %s' % 'INSERT INTO post VALUES')
+    #         logger.error('error: %s' % err)
+    #     finally:
+    #         data = cursor.fetchall()
+    #         cursor.close()
+    #         return data
 
     def retrieve_all_usernames(self):
         query = "SELECT username FROM user ORDER BY username ASC;"

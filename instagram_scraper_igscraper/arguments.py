@@ -1,6 +1,7 @@
 descriptor = '  {:<30} {}'
 message_help_required_tagname = descriptor.format('', 'required: provide a tag to scrape')
 message_help_required_login_username = descriptor.format('', 'required: add a login username')
+message_help_required_login_password = descriptor.format('', 'required: add a login password')
 message_help_required_users_to_remove = descriptor.format('', 'required: add users to remove')
 message_help_required_users_n_to_remove = descriptor.format('', 'required: add user numbers to remove')
 message_help_required_tags_to_remove = descriptor.format('', 'required: add tags to remove')
@@ -12,6 +13,8 @@ message_help_required_logged_in = descriptor.format('', 'required: you need to b
 args_options = [
     ['--login-username', 'the login username' + '\n'
      + message_help_required_login_username],
+    ['--login-password', 'the login password' + '\n'
+     + message_help_required_login_password],
     ['--update-users', 'Check all previously scraped users for new posts' + '\n'
      + message_help_recommended_max],
     ['--top-tags', 'scrape top tags' + '\n'

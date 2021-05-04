@@ -17,6 +17,7 @@ class GrabPostLinks(actions.Action):
         self.__link = link
         self.__max_download = scraper.max_download
         self.__xpath = xpath
+        self.__post_element_count = 0
 
     def do(self):
         """
@@ -56,7 +57,23 @@ class GrabPostLinks(actions.Action):
                         return []
 
                     try:
-                        links += [post_element.get_attribute('href') for post_element in elements]
+                        for post_element in elements:
+                            self.__post_element_count = self.__post_element_count + 1
+                            try:
+                                svgElement = post_element.find_element_by_xpath('.//*[name()="svg"]')
+                                ariaLabel = svgElement.get_attribute('aria-label')
+                                if ariaLabel.lower() == 'clip' or ariaLabel.lower() == 'video' or ariaLabel.lower() == 'igtv':
+                                    # only add clip and igtv video
+                                    link = post_element.get_attribute('href')
+                                    links.append(link)
+                                    print ('added link: ' + link)
+                            except (NoSuchElementException, StaleElementReferenceException):
+                                pass
+
+                            # svg_element = post_element.find_element_by_xpath('//*[name()="svg" and @aria-label="Clip"]')
+                            # if svg_element is not None:
+                            #     links += post_element.get_attribute('href')
+                        # links += [post_element.get_attribute('href') for post_element in elements]
                     except StaleElementReferenceException as err3:
                         logger.error(err3)
                         return []
@@ -73,10 +90,12 @@ class GrabPostLinks(actions.Action):
             if len(post_links) >= self.__max_download:
                 self._web_driver.maximize_window()
                 return post_links[:self.__max_download]
+            if self.__post_element_count >= 500:  # if this user has more than 500 posts, don't look further
+                return post_links
 
             # Scroll down to bottom
             self._web_driver.execute_script('window.scrollTo(0, document.body.scrollHeight);')
-            time.sleep(0.5)
+            time.sleep(3)
 
             # If instagram asks to show more posts, click it
             try:

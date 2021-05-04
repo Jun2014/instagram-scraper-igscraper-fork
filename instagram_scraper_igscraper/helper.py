@@ -108,6 +108,13 @@ def rename_user_dir(old_directory_name, new_directory_name):
     else:
         return True
 
+def append_links_to_file(file_name, username, post_type, links):
+    if len(links) > 0:
+        with open(file_name, "a+") as file_object:
+            joined_string = ''
+            for link in links:
+                joined_string += username + ':' + post_type + ':' + link + '\n'
+            file_object.write(joined_string)
 
 def get_datetime_str(date_time):
     """ Create a date-time string """
@@ -127,4 +134,29 @@ def extract_post_id_from_url(url):
         return post_id.group(1)
 
     logger.error('Could not extract the post id')
+    return ''
+
+
+def extract_shortcode_from_url(url):
+    """ Return the shortcode id """
+
+    post_id = re.search('/p/(.+)', url)
+    if post_id:
+        if post_id.group(1)[-1] == '/':
+            return post_id.group(1)[:-1]
+        return post_id.group(1)
+
+    reel_id = re.search('/reel/(.+)', url)
+    if reel_id:
+        if reel_id.group(1)[-1] == '/':
+            return reel_id.group(1)[:-1]
+        return reel_id.group(1)
+
+    tv_id = re.search('/tv/(.+)', url)
+    if tv_id:
+        if tv_id.group(1)[-1] == '/':
+            return tv_id.group(1)[:-1]
+        return tv_id.group(1)
+
+    logger.error('Could not extract the shortcode id')
     return ''

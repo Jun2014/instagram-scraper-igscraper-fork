@@ -148,4 +148,4 @@ dmypy.json
 cython_debug/
 
 # Test temp folder
-instagram_scraper/test/temp
+instagram_scraper_igscraper/test/temp

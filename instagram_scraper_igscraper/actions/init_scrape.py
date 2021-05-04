@@ -38,10 +38,10 @@ class InitScrape(actions.Action):
 
         if actions.PostHasMultipleContent(self._scraper, self.__link).do():
             actions.ScrapeMultipleContent(self._scraper, self.__link, self.__output_path).do()
-            self.__database.insert_post(self.__link, True, self.__userid)
+            self.__database.insert_post(self.__link, True, self.__userid, True)
         else:
             actions.ScrapeSingleContent(self._scraper, self.__link, self.__output_path).do()
-            self.__database.insert_post(self.__link, False, self.__userid)
+            self.__database.insert_post(self.__link, False, self.__userid, True)
 
     def on_fail(self):
         print('\nerror loading post')
