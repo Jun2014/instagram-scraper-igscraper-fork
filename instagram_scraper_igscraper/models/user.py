@@ -6,14 +6,12 @@ from .. import helper
 
 class User:
     def __init__(self, username):
-        self.__username = username
-        self.__post_links = []
-        self.__profile_link = constants.INSTAGRAM_URL + self.__username + '/'
-        self.__stories_link = constants.INSTAGRAM_URL + 'stories/' + self.__username + '/'
+        self.__username = username.strip('/').split('/')[-1]
+        self.__profile_link = username
 
-        self.__output_user_posts_path = constants.USERS_DIR + '/' + username + '/posts'
-        self.__output_user_stories_path = constants.USERS_DIR + '/' + username + '/stories'
-        self.__output_user_dp_path = constants.USERS_DIR + '/' + username + '/display_photo'
+        self.__output_user_posts_path = constants.USERS_DIR + '/' + self.__username + '/posts'
+        self.__output_user_stories_path = constants.USERS_DIR + '/' + self.__username + '/stories'
+        self.__output_user_dp_path = constants.USERS_DIR + '/' + self.__username + '/display_photo'
 
     def create_user_output_directories(self):
         if not os.path.exists(self.__output_user_posts_path):

@@ -31,6 +31,7 @@ class GrabPostLinks(actions.Action):
 
         increment_browser_height = True
 
+        reties = 0
         while True:
 
             def grab_links():
@@ -51,7 +52,7 @@ class GrabPostLinks(actions.Action):
                 # Grab all post links
                 else:
                     try:
-                        elements = self._web_driver.find_elements_by_css_selector(constants.POSTS_CSS + ' [href]')
+                        elements = self._web_driver.find_elements_by_css_selector('img.photo-item__img')
                     except (NoSuchElementException, StaleElementReferenceException) as err2:
                         logger.error(err2)
                         return []
@@ -60,13 +61,9 @@ class GrabPostLinks(actions.Action):
                         for post_element in elements:
                             self.__post_element_count = self.__post_element_count + 1
                             try:
-                                svgElement = post_element.find_element_by_xpath('.//*[name()="svg"]')
-                                ariaLabel = svgElement.get_attribute('aria-label')
-                                if ariaLabel.lower() == 'clip' or ariaLabel.lower() == 'video' or ariaLabel.lower() == 'igtv':
-                                    # only add clip and igtv video
-                                    link = post_element.get_attribute('href')
-                                    links.append(link)
-                                    print ('added link: ' + link)
+                                link = post_element.get_attribute('src')
+                                links.append(link)
+                                # print ('added link: ' + link)    
                             except (NoSuchElementException, StaleElementReferenceException):
                                 pass
 
@@ -83,6 +80,7 @@ class GrabPostLinks(actions.Action):
 
                 return links
 
+            pre_length = len(post_links)
             post_links += grab_links()
 
             # Remove any duplicates and return the list if maximum was reached
@@ -90,44 +88,35 @@ class GrabPostLinks(actions.Action):
             if len(post_links) >= self.__max_download:
                 self._web_driver.maximize_window()
                 return post_links[:self.__max_download]
-            if self.__post_element_count >= 500:  # if this user has more than 500 posts, don't look further
-                return post_links
+            # if self.__post_element_count >= 500:  # if this user has more than 500 posts, don't look further
+            #     return post_links
+
+            print ('lens', len(post_links), pre_length)
+            if len(post_links) == pre_length:
+                self._web_driver.maximize_window()
+                reties = reties + 1
+                if reties > 10:
+                    print ('no more item, exiting')
+                    return post_links
+            else:
+                reties = 0
 
             # Scroll down to bottom
             self._web_driver.execute_script('window.scrollTo(0, document.body.scrollHeight);')
-            time.sleep(3)
+            print('scroll to bottom')
+            time.sleep(5)
 
-            # If instagram asks to show more posts, click it
-            try:
-                show_more_posts = self._web_driver.find_element_by_css_selector(constants.SHOW_MORE_POSTS_CSS)
-            except (NoSuchElementException, StaleElementReferenceException):
-                pass
+            # Change the browser height to prevent randomly being stuck while scrolling down
+            height = self._web_driver.get_window_size()['height']
+            if increment_browser_height:
+                height += 25
+                increment_browser_height = False
             else:
-                try:
-                    show_more_posts.click()
-                except ElementClickInterceptedException as err:
-                    logger.error(err)
-                    self.on_fail()
+                height -= 25
+                increment_browser_height = True
 
-            try:
-                self._web_driver.find_element_by_css_selector(constants.SCROLL_LOAD_CSS)
-            except (NoSuchElementException, StaleElementReferenceException):
-                # Reached the end, grab links for the last time, remove any duplicates and return the list
-                post_links += grab_links()
-                self._web_driver.maximize_window()
-                return sorted(set(post_links), key=lambda index: post_links.index(index))[:self.__max_download]
-            else:
-                # Change the browser height to prevent randomly being stuck while scrolling down
-                height = self._web_driver.get_window_size()['height']
-                if increment_browser_height:
-                    height += 25
-                    increment_browser_height = False
-                else:
-                    height -= 25
-                    increment_browser_height = True
-
-                width = self._web_driver.get_window_size()['width']
-                self._web_driver.set_window_size(width, height)
+            width = self._web_driver.get_window_size()['width']
+            self._web_driver.set_window_size(width, height)
 
     def on_fail(self):
         print('error while retrieving post links')

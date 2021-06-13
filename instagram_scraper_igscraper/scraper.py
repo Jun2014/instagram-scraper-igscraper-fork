@@ -8,6 +8,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.common.exceptions import WebDriverException
 from selenium.common.exceptions import SessionNotCreatedException
+from requests.exceptions import RequestException
 
 import colorama
 
@@ -17,6 +18,7 @@ from .progress_bar import ProgressBar
 from . import helper
 from . import get_data
 from . import actions
+from . import retriever
 
 logger = logging.getLogger('__name__')
 
@@ -129,8 +131,10 @@ class Scraper:
 
         filtered_post_links = []
         shortcode_set = set()
+        from urllib.parse import urlparse
         for link in user.post_links:
-            shortcode = helper.extract_shortcode_from_url(link)
+            url = urlparse(link)
+            shortcode = url.geturl()
             if (shortcode not in shortcode_set) and (not self.__database.video_post_link_exists_by_shortcode(shortcode)):
             # if not self.__database.user_post_link_exists(user.username, link):
                 shortcode_set.add(shortcode)
@@ -178,115 +182,18 @@ class Scraper:
         new_post_log_file_timestamp = datetime.utcnow().isoformat().replace(':', '-')
         new_post_log_file_name = "new_posts/" + new_post_log_file_timestamp + ".txt"
         print("will log new post files to file: ", new_post_log_file_name)
-        agressive_sleep = True
+        agressive_sleep = False
 
         cur_user_count = 0
         for x, user in enumerate(users):
             if agressive_sleep:
                 time.sleep(60)
 
-            if not self.__is_logged_in:
-                self.__check_if_ip_is_restricted()
-
             sys.stdout.write('\n')
             cur_user_count = cur_user_count + 1
             print('\033[1m' + 'username: ' + user.username + '(', cur_user_count, '/', len(users), ')' + '\033[0;0m')
 
             user.create_user_output_directories()
-
-            # Retrieve the id using actions
-            if self.__is_logged_in:
-                userid = actions.GetUserId(self, user.username).do()
-            # Retrieve the id using requests
-            else:
-                userid = get_data.get_id_by_username_from_ig(user.username)
-
-            # Continue to next user if id not found
-            if userid is None:
-                print(self.__c_fore.RED + 'could not load user profile' + self.__c_style.RESET_ALL)
-                time.sleep(30)
-                continue
-
-            # actions.ScrapeDisplay(self, user).do()
-
-            if not self.__database.user_exists(user.username):
-                self.__database.insert_userid_and_username(userid, user.username)
-
-            if self.__is_logged_in and self.__download_stories:
-                self.__init_scrape_stories(user)
-
-            if actions.CheckIfAccountIsPrivate(self, user).do():
-                print(self.__c_fore.RED + 'account is private' + self.__c_style.RESET_ALL)
-                continue
-
-            if actions.CheckIfHasLink(self, user, '/reels').do():
-                if agressive_sleep:
-                    time.sleep(30)
-
-                print('retrieving reel links from reels ' + user.profile_link + 'reels/' +', please wait... ')
-
-                user.reel_links = actions.GrabReelLinks(self, user.profile_link + 'reels/').do()
-                user.reel_links = self.__filter_reel_links(user)
-
-                if len(user.reel_links) <= 0:
-                    print('no new reels to download')
-                else:
-                    print(self.__c_fore.GREEN + str(len(user.reel_links)) +
-                        ' reel(s) will be downloaded: ' + self.__c_style.RESET_ALL)
-
-                    # progress_bar = ProgressBar(len(user.reel_links), show_count=True)
-                    for link in user.reel_links:
-                        print('Scrape reel link: ' + link)
-                        # actions.InitScrape(self, link, None, user.output_user_reels_path, userid).do()
-                    #     progress_bar.update(1)
-                    # progress_bar.close()
-
-                    print ('write links to file')
-                    helper.append_links_to_file(new_post_log_file_name, user.username, 'Reel', user.reel_links)
-                    
-                    for link in user.reel_links:
-                        print ('write ' + link + ' to db')
-                        self.__database.insert_video_post_to_download(user.username, 'Reel', link, new_post_log_file_timestamp)
-            else:
-                print ('No reels for user', user.username)
-
-            if actions.CheckIfHasLink(self, user, '/channel').do():
-                if agressive_sleep:
-                    time.sleep(30)
-                
-                print('retrieving igtv links from igtv ' + user.profile_link + 'channel/' +', please wait... ')
-
-                user.igtv_links = actions.GrabIgtvLinks(self, user.profile_link + 'channel/').do()
-                user.igtv_links = self.__filter_igtv_links(user)
-
-                if len(user.igtv_links) <= 0:
-                    print('no new igtvs to download')
-                else:
-                    print(self.__c_fore.GREEN + str(len(user.igtv_links)) +
-                        ' igtv(s) will be downloaded: ' + self.__c_style.RESET_ALL)
-
-                    # progress_bar = ProgressBar(len(user.igtv_links), show_count=True)
-                    for link in user.igtv_links:
-                        print('Scrape igtv: ' + link)
-                        # actions.InitScrape(self, link, None, user.output_user_igtvs_path, userid).do()
-                    #     progress_bar.update(1)
-                    # progress_bar.close()
-
-                    print ('write links to file')
-                    helper.append_links_to_file(new_post_log_file_name, user.username, 'Igtv', user.igtv_links)
-
-                    for link in user.igtv_links:
-                        print ('write ' + link + ' to db')
-                        self.__database.insert_video_post_to_download(user.username, 'Igtv', link, new_post_log_file_timestamp)
-            else:
-                print ('No igtv for user', user.username)
-
-            if agressive_sleep:
-                time.sleep(30)
-
-            # if not actions.CheckIfProfileHasPosts(self, user).do():
-            #     print(self.__c_fore.RED + 'no posts found' + self.__c_style.RESET_ALL)
-            #     continue
 
             print('retrieving post links from profile ' + user.profile_link +', please wait... ')
 
@@ -310,8 +217,16 @@ class Scraper:
                 helper.append_links_to_file(new_post_log_file_name, user.username, 'Post', user.post_links)
                 
                 for link in user.post_links:
+                    print ('downloading ' + link)
+                    try:
+                        retriever.download(link, output_path=user.output_user_dp_path)
+                    except (OSError, RequestException) as err:
+                        logger.error(err)
+                        continue
+
                     print ('write ' + link + ' to db')
                     self.__database.insert_video_post_to_download(user.username, 'Post', link, new_post_log_file_timestamp)
+
 
     def init_scrape_tags(self, tags, tag_type):
         """ Start function for scraping tags """
